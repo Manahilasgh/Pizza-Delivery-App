@@ -1,0 +1,8 @@
+fastapi==0.95.2
+uvicorn==0.22.0
+pydantic==1.10.13
+sqlalchemy==1.4.49
+werkzeug==3.1.4
+fastapi_jwt_auth==0.5.0
+SQLAlchemy_utils==0.37.8
+psycopg2==2.9.11
