@@ -15,7 +15,7 @@ export const PIZZAS = [
     },
     {
         id: "3",
-        name: "Cheese Lover",
+        name: "Cheese",
         description: "Classic Margherita with extra mozzarella and cheddar cheese blend.",
         basePrice: 10,
         image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?q=80&w=1000&auto=format&fit=crop"
@@ -36,23 +36,9 @@ export const PIZZAS = [
     },
     {
         id: "6",
-        name: "Peperoni Feast",
+        name: "Peperoni",
         description: "Classic American pepperoni with double mozzarella on a thin crust.",
         basePrice: 11,
         image: "https://img.freepik.com/free-photo/pepperoni-pizza-with-sausages-cheese-dark-wooden-table_220768-9277.jpg?size=626&ext=jpg"
-    },
-    {
-        id: "7",
-        name: "Veggie Supreme",
-        description: "Loaded with fresh bell peppers, onions, mushrooms, and olives.",
-        basePrice: 11,
-        image: "https://img.freepik.com/free-photo/tasty-pepperoni-pizza-black-concrete-background_1220-413.jpg"
-    },
-    {
-        id: "8",
-        name: "BBQ Chicken",
-        description: "Smoky BBQ sauce, grilled chicken, red onions, and cilantro.",
-        basePrice: 14,
-        image: "https://img.freepik.com/free-photo/top-view-pepperoni-pizza-with-mushroom-sausages-bell-pepper-olive-corn-black-wooden_141793-2158.jpg"
     }
 ];

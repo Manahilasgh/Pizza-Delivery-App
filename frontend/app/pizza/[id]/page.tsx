@@ -5,10 +5,17 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Minus, Plus, ShoppingCart, Star } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { useState } from "react";
+import { useCart } from "@/context/CartContext";
+import { useToast } from "@/context/ToastContext";
+import { use, useState } from "react";
 
-export default function PizzaDetailPage({ params }: { params: { id: string } }) {
-    const pizza = PIZZAS.find((p) => p.id === params.id);
+export default function PizzaDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
+    const pizza = PIZZAS.find((p) => p.id === id);
+    const { addItem } = useCart();
+    const { showToast } = useToast();
+
+    console.log("PizzaDetailPage Debug:", { id, pizzaFound: !!pizza });
     const [quantity, setQuantity] = useState(1);
     const [selectedSize, setSelectedSize] = useState("Medium");
 
@@ -59,8 +66,8 @@ export default function PizzaDetailPage({ params }: { params: { id: string } }) 
                                         key={size}
                                         onClick={() => setSelectedSize(size)}
                                         className={`px-6 py-3 rounded-xl font-medium transition-all ${selectedSize === size
-                                                ? "bg-primary text-white shadow-lg shadow-primary/20 scale-105"
-                                                : "bg-secondary/5 text-secondary hover:bg-secondary/10"
+                                            ? "bg-primary font-bold shadow-lg shadow-primary/20 scale-105"
+                                            : "bg-secondary/5 text-secondary hover:bg-secondary/10"
                                             }`}
                                     >
                                         {size}
@@ -96,7 +103,23 @@ export default function PizzaDetailPage({ params }: { params: { id: string } }) 
 
                         {/* Actions */}
                         <div className="flex gap-4">
-                            <Button size="xl" className="flex-1 text-lg h-14 rounded-xl shadow-xl shadow-primary/20">
+                            <Button
+                                size="xl"
+                                className="flex-1 text-lg h-14 rounded-xl shadow-xl shadow-primary/20"
+                                onClick={() => {
+                                    if (pizza) {
+                                        addItem({
+                                            id: pizza.id,
+                                            name: pizza.name,
+                                            size: selectedSize,
+                                            basePrice: pizza.basePrice,
+                                            quantity: quantity,
+                                            image: pizza.image,
+                                        });
+                                        showToast("Item added to cart successfully!");
+                                    }
+                                }}
+                            >
                                 <ShoppingCart className="mr-2 h-5 w-5" /> Add to Cart
                             </Button>
                         </div>

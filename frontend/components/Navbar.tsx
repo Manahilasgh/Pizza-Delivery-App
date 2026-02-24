@@ -6,12 +6,26 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Menu, X, User, Pizza } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { cn } from "@/lib/utils";
+import { useCart } from "@/context/CartContext";
+import { useToast } from "@/context/ToastContext";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const { token, user, logout } = useAuth();
+  const { showToast } = useToast();
+  const { itemsCount, setIsCartOpen } = useCart();
+  const [shouldBounce, setShouldBounce] = useState(false);
+
+  useEffect(() => {
+    if (itemsCount > 0) {
+      setShouldBounce(true);
+      const timer = setTimeout(() => setShouldBounce(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [itemsCount]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,11 +43,10 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled
-          ? "bg-white/95 backdrop-blur-md shadow-lg"
-          : "bg-white/80 backdrop-blur-sm"
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${isScrolled
+        ? "bg-white/95 backdrop-blur-md shadow-lg"
+        : "bg-white/80 backdrop-blur-sm"
+        }`}
     >
       <div className="container mx-auto px-4 max-w-7xl">
         <div className="flex items-center justify-between h-20">
@@ -54,17 +67,15 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-sm font-semibold transition-colors relative group ${
-                  pathname === link.href
-                    ? "text-primary"
-                    : "text-secondary/70 hover:text-primary"
-                }`}
+                className={`text-sm font-semibold transition-colors relative group ${pathname === link.href
+                  ? "text-primary"
+                  : "text-secondary/70 hover:text-primary"
+                  }`}
               >
                 {link.label}
                 <span
-                  className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full ${
-                    pathname === link.href ? "w-full" : ""
-                  }`}
+                  className={`absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-full ${pathname === link.href ? "w-full" : ""
+                    }`}
                 />
               </Link>
             ))}
@@ -72,11 +83,22 @@ export default function Navbar() {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative group">
+            <Button
+              variant="ghost"
+              size="icon"
+              className={cn(
+                "relative group",
+                shouldBounce && "animate-bounce"
+              )}
+              onClick={() => setIsCartOpen(true)}
+            >
               <ShoppingCart className="h-5 w-5 transition-transform group-hover:scale-110 duration-300" />
-              <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
-                0
-              </span>
+              {itemsCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-600 text-white font-medium text-[10px] rounded-full h-5 w-5 flex items-center justify-center shadow-lg ring-2 ring-red animate-in zoom-in duration-300">
+                  {itemsCount}
+                  <span className="absolute inset-0 rounded-full bg-red-600 animate-ping opacity-75" />
+                </span>
+              )}
             </Button>
 
             {token ? (
@@ -87,7 +109,10 @@ export default function Navbar() {
                     {user?.username || "Profile"}
                   </Button>
                 </Link>
-                <Button variant="outline" size="sm" onClick={logout}>
+                <Button variant="outline" size="sm" onClick={() => {
+                  logout();
+                  showToast("Logged out successfully", "success");
+                }}>
                   Logout
                 </Button>
               </div>
@@ -129,20 +154,27 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsMobileMenuOpen(false)}
-                  className={`text-base font-semibold py-2 transition-colors ${
-                    pathname === link.href
-                      ? "text-primary"
-                      : "text-secondary/70 hover:text-primary"
-                  }`}
+                  className={`text-base font-semibold py-2 transition-colors ${pathname === link.href
+                    ? "text-primary"
+                    : "text-secondary/70 hover:text-primary"
+                    }`}
                 >
                   {link.label}
                 </Link>
               ))}
 
               <div className="pt-4 border-t border-secondary/10 flex flex-col gap-3">
-                <Button variant="ghost" size="sm" className="justify-start gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start gap-2"
+                  onClick={() => {
+                    setIsCartOpen(true);
+                    setIsMobileMenuOpen(false);
+                  }}
+                >
                   <ShoppingCart className="h-4 w-4" />
-                  Cart (0)
+                  Cart ({itemsCount})
                 </Button>
 
                 {token ? (
@@ -153,7 +185,11 @@ export default function Navbar() {
                         {user?.username || "Profile"}
                       </Button>
                     </Link>
-                    <Button variant="outline" size="sm" onClick={() => { logout(); setIsMobileMenuOpen(false); }}>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      logout();
+                      showToast("Logged out successfully", "success");
+                      setIsMobileMenuOpen(false);
+                    }}>
                       Logout
                     </Button>
                   </>

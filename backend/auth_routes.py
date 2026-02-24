@@ -23,8 +23,8 @@ async def hello(Authorize: AuthJWT = Depends()):
 
     try:
         Authorize.jwt_required()
-    except:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Token")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     return {"message": "Hello World"}
 
@@ -58,8 +58,9 @@ async def login(user:LogInModel, Authorize:AuthJWT = Depends()):
 
     db_user = session.query(User).filter(User.username == user.username).first()
     if db_user and check_password_hash(db_user.password, user.password):
-        access_token =Authorize.create_access_token(subject=db_user.username)
-        refresh_token = Authorize.create_refresh_token(subject=db_user.username)
+        # Create tokens with explicit subject
+        access_token = Authorize.create_access_token(subject=str(db_user.username))
+        refresh_token = Authorize.create_refresh_token(subject=str(db_user.username))
 
         response = {
             "access": access_token,

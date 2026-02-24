@@ -1,6 +1,7 @@
 import { Button } from "./ui/button";
 import { ArrowRight, Star } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Hero() {
     return (
@@ -32,12 +33,16 @@ export default function Hero() {
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                        <Link href="/dashboard">
                         <Button size="xl" className="shadow-xl shadow-primary/20 text-lg h-14 px-8 rounded-full">
                             Order Now <ArrowRight className="ml-2 h-5 w-5" />
                         </Button>
+                        </Link>
+                        <Link href="/menu">
                         <Button size="xl" variant="outline" className="border-2 text-lg h-14 px-8 rounded-full bg-white/50 hover:bg-white">
                             View Menu
                         </Button>
+                        </Link>
                     </div>
 
                     <div className="flex items-center gap-4 pt-4 justify-center lg:justify-start">

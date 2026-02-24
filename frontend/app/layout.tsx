@@ -3,9 +3,12 @@ import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/context/AuthContext";
+import { CartProvider } from "@/context/CartContext";
+import { ToastProvider } from "@/context/ToastContext";
+import CartSidebar from "@/components/CartSidebar";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const poppins = Poppins({ 
+const poppins = Poppins({
   weight: ["400", "500", "600", "700", "800", "900"],
   subsets: ["latin"],
   variable: "--font-poppins"
@@ -24,12 +27,17 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${poppins.variable} font-sans antialiased`}>
-        <AuthProvider>
-          <Navbar />
-          <main className="min-h-screen">
-            {children}
-          </main>
-        </AuthProvider>
+        <ToastProvider>
+          <CartProvider>
+            <AuthProvider>
+              <Navbar />
+              <CartSidebar />
+              <main className="min-h-screen">
+                {children}
+              </main>
+            </AuthProvider>
+          </CartProvider>
+        </ToastProvider>
       </body>
     </html>
   );

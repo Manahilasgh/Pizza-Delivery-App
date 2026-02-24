@@ -1,7 +1,6 @@
 from http.client import responses
 
-from fastapi import APIRouter, Depends, status
-from fastapi.exceptions import HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException
 from uvicorn.protocols.http.auto import AutoHTTPProtocol
 
 from database import Session, engine
@@ -23,8 +22,8 @@ async def hello(Authorize:AuthJWT = Depends()):
 
     try:
         Authorize.jwt_required()
-    except:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail='Invalid Token')
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"JWT Error: {repr(e)}")
 
     return {"message": "Hello World"}
 
@@ -32,8 +31,8 @@ async def hello(Authorize:AuthJWT = Depends()):
 async def place_an_order(order:OrderModel, Authorize: AuthJWT = Depends()):
     try:
         Authorize.jwt_required()
-    except:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Token")
+    except Exception:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
     current_user = Authorize.get_jwt_subject()
 
@@ -153,8 +152,8 @@ async def update_order(id:int, order:OrderModel, Authorize: AuthJWT = Depends())
 async def update_order_status(id:int, order:OrderStatusModel, Authorize:AuthJWT = Depends()):
     try:
         Authorize.jwt_required()
-    except:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail= "Invalid Token")
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"JWT Error: {repr(e)}")
 
     subject = Authorize.get_jwt_subject()
     current_user = session.query(User).filter(User.username == subject).first()
