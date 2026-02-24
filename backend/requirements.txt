@@ -5,4 +5,7 @@ sqlalchemy==1.4.49
 werkzeug==3.1.4
 fastapi_jwt_auth==0.5.0
 SQLAlchemy_utils==0.37.8
-psycopg2==2.9.11
+psycopg2-binary==2.9.11
+passlib==1.7.4
+bcrypt==4.0.1
+python-multipart==0.0.6

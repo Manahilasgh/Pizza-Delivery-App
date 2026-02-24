@@ -19,6 +19,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://699d676fc623b078fcbfbe37--pizzaslicee.netlify.app/"
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -27,16 +28,20 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "message": "Pizza Delivery API is running"}
+    return {"status": "ok", "message": "PizzaSlice API is running"}
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring"""
+    return {"status": "healthy"}
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
 
     openapi_schema = get_openapi(
-        title = "My Auth API",
+        title = "PizzaSlice Auth API",
         version = "1.0",
-        description = "An API with an Authorize Button",
+        description = "Pizza Delivery API with JWT Authentication",
         routes = app.routes,
     )
 
