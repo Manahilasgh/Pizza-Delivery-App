@@ -1,101 +1,97 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { api } from "@/lib/api";
+import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-
+import { api } from "@/lib/api";
 
 interface User {
-    username: string;
-    email?: string;
-    is_staff?: boolean;
+  id: number;
+  username: string;
+  email: string;
+  is_staff: boolean;
+  is_active: boolean;
 }
 
 interface AuthContextType {
-    user: User | null;
-    token: string | null;
-    login: (data: any) => Promise<void>;
-    signup: (data: any) => Promise<void>;
-    logout: () => void;
-    loading: boolean;
+  user: User | null;
+  token: string | null;
+  login: (credentials: { username: string; password: string }) => Promise<void>;
+  logout: () => void;
+  isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-    const [user, setUser] = useState<User | null>(null);
-    const [token, setToken] = useState<string | null>(null);
-    const [loading, setLoading] = useState(true);
-    const router = useRouter();
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
 
-    useEffect(() => {
-        // Check for token in localStorage on mount
-        const storedToken = localStorage.getItem("token");
-        const storedUser = localStorage.getItem("user");
+  // Load user from localStorage on mount
+  useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
 
-        if (storedToken) {
-            setToken(storedToken);
-            if (storedUser) {
-                setUser(JSON.parse(storedUser));
-            }
-        }
-        setLoading(false);
-    }, []);
-
-    const login = async (data: any) => {
-        try {
-            const response = await api.post("/auth/login", data);
-            const { access, refresh } = response.data;
-
-            setToken(access);
-            localStorage.setItem("token", access);
-            localStorage.setItem("refresh", refresh);
-
-            // Decode token or user data not provided in login response fully, 
-            // but we know username from input. Ideally fetch user profile. 
-            // For now, store minimal user info.
-            const userData = { username: data.username }; // API response doesn't return user obj
-            setUser(userData);
-            localStorage.setItem("user", JSON.stringify(userData));
-
-            router.push("/");
-        } catch (error) {
-            console.error("Login failed", error);
-            throw error;
-        }
-    };
-
-    const signup = async (data: any) => {
-        try {
-            await api.post("/auth/signup", data);
-            // Auto login or redirect to login
-            router.push("/auth/login");
-        } catch (error) {
-            console.error("Signup failed", error);
-            throw error;
-        }
-    };
-
-    const logout = () => {
-        setUser(null);
-        setToken(null);
-        localStorage.removeItem("token");
-        localStorage.removeItem("refresh");
+    if (storedToken && storedUser) {
+      setToken(storedToken);
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error("Failed to parse stored user:", e);
         localStorage.removeItem("user");
-        router.push("/auth/login");
-    };
-
-    return (
-        <AuthContext.Provider value={{ user, token, login, signup, logout, loading }}>
-            {children}
-        </AuthContext.Provider>
-    );
-}
-
-export function useAuth() {
-    const context = useContext(AuthContext);
-    if (context === undefined) {
-        throw new Error("useAuth must be used within an AuthProvider");
+      }
     }
-    return context;
+
+    setIsLoading(false);
+  }, []);
+
+  const login = async ({ username, password }: { username: string; password: string }) => {
+    try {
+      const response = await api.post("/auth/login", {
+        username,
+        password,
+      });
+
+      const { access_token, user: userData } = response.data;
+
+      // Save to localStorage
+      localStorage.setItem("token", access_token);
+      localStorage.setItem("user", JSON.stringify(userData));
+
+      // CRITICAL FIX: Update state immediately so Navbar re-renders
+      setToken(access_token);
+      setUser(userData);
+
+      console.log("Login successful, user:", userData);
+
+      // Redirect to dashboard
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Login failed:", error);
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken(null);
+    setUser(null);
+    router.push("/");
+  };
+
+  return (
+    <AuthContext.Provider value={{ user, token, login, logout, isLoading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error("useAuth must be used within an AuthProvider");
+  }
+  return context;
+};
