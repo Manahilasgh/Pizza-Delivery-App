@@ -1,122 +1,169 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException, status
 from fastapi.responses import JSONResponse
-from auth_routes import auth_router
-from order_routes import order_router
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from database import engine, Base, Session
+from models import User
+from werkzeug.security import generate_password_hash, check_password_hash
 from fastapi_jwt_auth import AuthJWT
 from schemas import Settings
 import inspect, re
 from fastapi.openapi.utils import get_openapi
 from fastapi.routing import APIRoute
-from database import engine, Base
 
-from fastapi.middleware.cors import CORSMiddleware
-
+# Create tables on startup
 Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
     title="PizzaSlice API",
-    description="Pizza Delivery API with authentication",
+    description="Pizza Delivery API",
     version="1.0.0"
-    )
-
-# MANUAL OPTIONS HANDLER - This runs FIRST before anything else
-@app.middleware("http")
-async def cors_middleware(request: Request, call_next):
-    if request.method == "OPTIONS":
-        return JSONResponse(
-            content={},
-            status_code=200,
-            headers={
-                "Access-Control-Allow-Origin": "https://pizzaslicee.netlify.app",
-                "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-                "Access-Control-Allow-Headers": "Content-Type, Authorization, Accept",
-                "Access-Control-Allow-Credentials": "true",
-                "Access-Control-Max-Age": "3600",
-            }
-        )
-    
-    response = await call_next(request)
-    
-    # Add CORS headers to all responses
-    response.headers["Access-Control-Allow-Origin"] = "https://pizzaslicee.netlify.app"
-    response.headers["Access-Control-Allow-Credentials"] = "true"
-    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS, PATCH"
-    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Accept"
-    
-    return response
-# Standard CORS for backup
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://pizzaslicee.netlify.app/"
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-    max_age=3600,
 )
 
+# CORS - Allow everything for now (we'll restrict later)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow ALL origins temporarily
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Pydantic models
+class SignUpModel(BaseModel):
+    username: str
+    email: str
+    password: str
+
+class LogInModel(BaseModel):
+    username: str
+    password: str
+
+# ROOT ENDPOINT
 @app.get("/")
 async def root():
-    return {"status": "ok", "message": "PizzaSlice API is running"}
-
-@app.get("/health")
-async def health_check():
-    """Health check endpoint for monitoring"""
-    return {"status": "healthy"}
-def custom_openapi():
-    if app.openapi_schema:
-        return app.openapi_schema
-
-    openapi_schema = get_openapi(
-        title = "PizzaSlice Auth API",
-        version = "1.0",
-        description = "Pizza Delivery API with JWT Authentication",
-        routes = app.routes,
-    )
-
-    openapi_schema["components"]["securitySchemes"] = {
-        "Bearer Auth": {
-            "type": "apiKey",
-            "in": "header",
-            "name": "Authorization",
-            "description": "Enter: **'Bearer &lt;JWT&gt;'**, where JWT is the access token"
-        }
+    return {
+        "status": "ok", 
+        "message": "PizzaSlice API is running! 🍕",
+        "cors": "WIDE OPEN (all origins allowed)"
     }
 
-    # Get all routes where jwt_optional() or jwt_required
-    api_router = [route for route in app.routes if isinstance(route, APIRoute)]
+# SIGNUP - No JWT Auth dependency
+@app.post('/auth/signup', status_code=status.HTTP_201_CREATED)
+async def signup(user: SignUpModel):
+    session = Session(bind=engine)
+    
+    try:
+        # Check if user exists
+        db_user = session.query(User).filter(
+            (User.username == user.username) | (User.email == user.email)
+        ).first()
+        
+        if db_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User with that username or email already exists"
+            )
+        
+        # Create new user
+        new_user = User(
+            username=user.username,
+            email=user.email,
+            password=generate_password_hash(user.password),
+            is_active=True,
+            is_staff=False
+        )
+        
+        session.add(new_user)
+        session.commit()
+        session.refresh(new_user)
+        
+        return {
+            "message": "User created successfully",
+            "user": {
+                "id": new_user.id,
+                "username": new_user.username,
+                "email": new_user.email
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+    finally:
+        session.close()
 
-    for route in api_router:
-        path = getattr(route, "path")
-        endpoint = getattr(route,"endpoint")
-        methods = [method.lower() for method in getattr(route, "methods")]
+# LOGIN - With JWT token creation
+@app.post('/auth/login')
+async def login(user: LogInModel):
+    from fastapi_jwt_auth import AuthJWT
+    
+    session = Session(bind=engine)
+    
+    try:
+        # Find user
+        db_user = session.query(User).filter(User.username == user.username).first()
+        
+        if not db_user or not check_password_hash(db_user.password, user.password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid username or password"
+            )
+        
+        if not db_user.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Account is not active"
+            )
+        
+        # Create JWT tokens
+        authorize = AuthJWT()
+        access_token = authorize.create_access_token(subject=db_user.username)
+        refresh_token = authorize.create_refresh_token(subject=db_user.username)
+        
+        return {
+            "message": "Login successful",
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "user": {
+                "id": db_user.id,
+                "username": db_user.username,
+                "email": db_user.email,
+                "is_staff": db_user.is_staff
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+    finally:
+        session.close()
 
-        for method in methods:
-            # access_token
-            if (
-                re.search("jwt_required", inspect.getsource(endpoint)) or
-                re.search("fresh_jwt_required", inspect.getsource(endpoint)) or
-                re.search("jwt_optional", inspect.getsource(endpoint))
-            ):
-                openapi_schema["paths"][path][method]["security"] = [
-                    {
-                        "Bearer Auth": []
-                    }
-                ]
-
-    app.openapi_schema = openapi_schema
-    return app.openapi_schema
-
-
-app.openapi = custom_openapi
-
-
-app.include_router(auth_router)
-app.include_router(order_router)
+# TEST ENDPOINT - No auth at all
+@app.post('/test/echo')
+async def echo_test(data: dict):
+    return {
+        "message": "Echo successful",
+        "received": data,
+        "cors": "working"
+    }
 
 @AuthJWT.load_config
 def get_config():
     return Settings()
+
+# Include your other routers if they exist
+try:
+    from order_routes import order_router
+    app.include_router(order_router)
+except:
+    pass
