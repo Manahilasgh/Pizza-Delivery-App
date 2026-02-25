@@ -36,7 +36,7 @@ async def place_an_order(order:OrderModel):
     except Exception:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
-    current_user = Authorize.get_jwt_subject()
+    current_user = authorize.get_jwt_subject()
 
     user = session.query(User).filter(User.username == current_user).first()
 
