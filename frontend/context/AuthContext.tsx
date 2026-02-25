@@ -1,10 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
-const API_URL = "http://localhost:8000/auth";
 
 interface User {
     username: string;
@@ -45,7 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const login = async (data: any) => {
         try {
-            const response = await axios.post(`${API_URL}/login`, data);
+            const response = await api.post("/auth/login", data);
             const { access, refresh } = response.data;
 
             setToken(access);
@@ -68,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signup = async (data: any) => {
         try {
-            await axios.post(`${API_URL}/signup`, data);
+            await api.post("/auth/signup", data);
             // Auto login or redirect to login
             router.push("/auth/login");
         } catch (error) {
