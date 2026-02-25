@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export default function CartSidebar() {
@@ -40,7 +40,7 @@ export default function CartSidebar() {
                     order_status: "PENDING"
                 };
                 console.log("Placing order for:", orderData.flavour, "Size:", orderData.pizza_size);
-                return axios.post("http://localhost:8000/orders/order", orderData, {
+                return api.post("/orders/order", orderData, {
                     headers: {
                         Authorization: `Bearer ${token}`
                     }

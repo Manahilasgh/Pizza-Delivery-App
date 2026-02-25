@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import axios from "axios";
+import { api } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, ShoppingCart, Loader2 } from "lucide-react";
@@ -33,7 +33,7 @@ export default function OrderModal({ isOpen, onClose, pizza }: any) {
                 order_status: "PENDING"
             };
 
-            await axios.post("http://localhost:8000/orders/order", orderData, {
+            await api.post("/orders/order", orderData, {
                 headers: {
                     Authorization: `Bearer ${token}`
                 }
